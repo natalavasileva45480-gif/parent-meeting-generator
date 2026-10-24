@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Конструктор промптов для протокола родительского собрания</title>
+<style>
+  * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+  body { margin: 0; background: #eef2f7; color: #222; }
+  .wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px; max-width: 1700px; margin: auto; }
+  .panel { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 14px rgba(0,0,0,.06); }
+  h1 { margin-top: 0; color: #1e3a8a; font-size: 22px; }
+  h2 { color: #334155; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; margin-top: 22px; font-size: 16px; }
+  label { display: block; font-weight: 600; margin: 6px 0 4px; font-size: 13px; color: #475569; }
+  input[type=text], textarea, select {
+    width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1;
+    border-radius: 6px; font-size: 14px; font-family: inherit;
+  }
+  textarea { min-height: 60px; resize: vertical; }
+  .block-item {
+    border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;
+    margin-bottom: 10px; background: #f8fafc;
+  }
+  .checkbox-container { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .checkbox-container input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; }
+  .btn {
+    border: none; border-radius: 6px; padding: 8px 14px; cursor: pointer;
+    font-weight: 600; font-size: 13px; transition: .15s;
+  }
+  .btn-add { background: #2563eb; color: #fff; }
+  .btn-add:hover { background: #1d4ed8; }
+  .btn-del { background: #fee2e2; color: #b91c1c; margin-left: auto; }
+  .btn-ok { background: #10b981; color: #fff; }
+  .btn-ok:hover { background: #059669; }
+  .btn-copy { background: #7c3aed; color: #fff; font-size: 15px; padding: 12px 20px; }
+  .btn-copy:hover { background: #6d28d9; }
+  .row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .row > * { flex: 1; min-width: 140px; }
+  .counter {
+    display: inline-block; background: #dbeafe; color: #1e40af;
+    padding: 3px 10px; border-radius: 12px; font-size: 13px; font-weight: 600; margin-left: 8px;
+  }
+  .prompt-preview {
+    background: #0f172a; color: #e2e8f0; padding: 20px; border-radius: 8px;
+    font-family: 'Consolas', monospace; font-size: 13px; line-height: 1.55;
+    white-space: pre-wrap; max-height: 75vh; overflow-y: auto;
+  }
+  .toast {
+    position: fixed; bottom: 30px; right: 30px; background: #10b981; color: #fff;
+    padding: 12px 20px; border-radius: 8px; font-weight: 600; opacity: 0; transition: .3s;
+    z-index: 999;
+  }
+  .toast.show { opacity: 1; }
+  .hint { font-size: 12px; color: #64748b; margin-top: 4px; }
+  @media (max-width: 1100px) { .wrap { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ЛЕВАЯ ПАНЕЛЬ -->
+  <div class="panel">
+    <h1>🧠 Конструктор промпта для нейросети</h1>
+    <p class="hint">Соберите структуру → скопируйте промпт → загрузите в ChatGPT / GigaChat / YandexGPT / Claude → получите готовый протокол.</p>
+
+    <h2>1. Контекст собрания</h2>
+    <div class="row">
+      <div><label>Дата</label><input type="text" id="date" value="07 октября 2026 года" oninput="updatePrompt()"></div>
+      <div><label>Класс</label><input type="text" id="classNum" value="7 «А»" oninput="updatePrompt()"></div>
+    </div>
+    <div class="row">
+      <div><label>Председатель</label><input type="text" id="chair" value="Иванова М.И." oninput="updatePrompt()"></div>
+      <div><label>Секретарь</label><input type="text" id="sec" value="Петрова С.В." oninput="updatePrompt()"></div>
+      <div><label>Присутствовало</label><input type="text" id="att" value="22 / 26" oninput="updatePrompt()"></div>
+    </div>
+
+    <h2>2. Настройки промпта</h2>
+    <div class="row">
+      <div>
+        <label>Целевая нейросеть</label>
+        <select id="targetLLM" onchange="updatePrompt()">
+          <option value="universal">Универсальный</option>
+          <option value="gpt">ChatGPT (GPT-4)</option>
+          <option value="giga">GigaChat (Сбер)</option>
+          <option value="yandex">YandexGPT</option>
+          <option value="claude">Claude</option>
+        </select>
+      </div>
+      <div>
+        <label>Стиль</label>
+        <select id="style" onchange="updatePrompt()">
+          <option value="official">Официально-деловой</option>
+          <option value="soft">Мягкий, родительско-ориентированный</option>
+          <option value="brief">Краткий (1 стр. на вопрос)</option>
+        </select>
+      </div>
+      <div>
+        <label>Детализация</label>
+        <select id="detail" onchange="updatePrompt()">
+          <option value="medium">Средняя</option>
+          <option value="short">Краткая</option>
+          <option value="full">Максимальная</option>
+        </select>
+      </div>
+    </div>
+    <div>
+      <label>Дополнительные требования (необязательно)</label>
+      <textarea id="extra" oninput="updatePrompt()" placeholder="Например: указать ссылки на ФЗ, избегать канцеляризмов, добавить цитату..."></textarea>
+    </div>
+
+    <h2>3. Вопросы повестки <span class="counter" id="counter">0 выбрано</span></h2>
+    <div id="blocks-container"></div>
+
+    <div class="row">
+      <input type="text" id="customTitle" placeholder="Своя тема повестки..." style="flex:3;">
+      <button class="btn btn-add" onclick="addCustomFromInput()" style="flex:1;">➕ Добавить</button>
+    </div>
+    <div class="row">
+      <button class="btn btn-add" onclick="addCustomBlock()">➕ Пустой блок</button>
+      <button class="btn btn-ok" onclick="selectAll(true)">Выбрать все</button>
+      <button class="btn btn-del" onclick="selectAll(false)">Снять все</button>
+    </div>
+  </div>
+
+  <!-- ПРАВАЯ ПАНЕЛЬ: ПРОМПТ -->
+  <div class="panel">
+    <h1>📋 Ваш промпт</h1>
+    <p class="hint">Скопируйте и вставьте в окно нейросети. Она сгенерирует протокол по вашей структуре.</p>
+    <div class="prompt-preview" id="prompt"></div>
+    <div class="row" style="margin-top:15px;">
+      <button class="btn btn-copy" onclick="copyPrompt()">📋 Скопировать промпт</button>
+      <button class="btn btn-ok" onclick="downloadPrompt()">💾 Скачать .txt</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">✅ Скопировано в буфер обмена!</div>
+
+<script>
+/* ====== БАЗА ПОВЕСТОК (23 темы) ====== */
+let blocks = [
+  { id:'org', checked:true,
+    title:'Организационные вопросы и планирование работы класса.',
+    тезисы:'Режим работы школы, график каникул, горячее питание, план внеурочной деятельности, выборы/отчёт родительского комитета.' },
+
+  { id:'mot', checked:true,
+    title:'Анализ успеваемости и пути повышения учебной мотивации.',
+    тезисы:'Текущая успеваемость, причины снижения мотивации, контроль домашнего задания, консультации с учителями-предметниками.' },
+
+  { id:'saf', checked:false,
+    title:'Обеспечение безопасности жизнедеятельности учащихся.',
+    тезисы:'ПДД, пожарная безопасность, поведение на водоёмах, комендантский час, фликеры, антитеррористическая защищённость.' },
+
+  { id:'gia', checked:false,
+    title:'Подготовка к государственной итоговой аттестации (ОГЭ/ЕГЭ).',
+    тезисы:'Нормативные документы, процедура экзаменов, ППЭ, апелляции, расписание, пробники, психологическая поддержка.' },
+
+  { id:'gad', checked:false,
+    title:'Запрет мобильных телефонов и цифровая гигиена.',
+    тезисы:'ФЗ № 618-ФЗ, правила использования гаджетов в школе, безопасность в соцсетях, кибербуллинг.' },
+
+  { id:'bul', checked:false,
+    title:'Профилактика буллинга и конфликтов в коллективе.',
+    тезисы:'Признаки травли, роли участников, служба медиации, алгоритм действий родителей, запрет решения конфликтов в чатах.' },
+
+  { id:'prof', checked:false,
+    title:'Профориентация и выбор профиля обучения / профессии.',
+    тезисы:'Профориентационное тестирование, востребованные направления, дни открытых дверей, колледжи и вузы региона.' },
+
+  { id:'hea', checked:false,
+    title:'Здоровье, режим дня и организация питания (СанПиН).',
+    тезисы:'СанПиН 2.3/2.4.3590-20, осанка, зрение, профилактика ОРВИ, горячее питание, режим сна.' },
+
+  { id:'vpr', checked:false,
+    title:'Подготовка к ВПР, НИКО, контрольным работам.',
+    тезисы:'Сроки, цели, критерии оценивания, порядок пересдачи, повторение материала.' },
+
+  { id:'pat', checked:false,
+    title:'Патриотическое и гражданско-нравственное воспитание.',
+    тезисы:'«Разговоры о важном», «Движение Первых», РДШ, юнармия, школьный музей, памятные даты.' },
+
+  { id:'bad', checked:false,
+    title:'Профилактика вредных привычек (вейпы, алкоголь, ПАВ).',
+    тезисы:'Признаки употребления, административная и уголовная ответственность, взаимодействие с ПДН.' },
+
+  { id:'sum', checked:false,
+    title:'Организация летнего отдыха и оздоровительной кампании.',
+    тезисы:'Лагеря, санатории, пришкольный лагерь, трудоустройство подростков 14+, документы.' },
+
+  { id:'fam', checked:false,
+    title:'Взаимодействие семьи и школы: детско-родительские отношения.',
+    тезисы:'Возрастные кризисы, активное слушание, границы гаджетов, совместный досуг.' },
+
+  { id:'fin', checked:false,
+    title:'Финансовые и организационные вопросы родительского комитета.',
+    тезисы:'Смета, добровольность взносов, безналичный расчёт, отчёт казначея.' },
+
+  { id:'func', checked:false,
+    title:'Формирование функциональной грамотности учащихся.',
+    тезисы:'Читательская, математическая, финансовая, естественно-научная, глобальные компетенции. Результаты PISA-аналогов, домашние задания на применение знаний.' },
+
+  { id:'fingr', checked:false,
+    title:'Финансовая грамотность: семейный бюджет и безопасность.',
+    тезисы:'Основы планирования бюджета, мошенничество в сети, банковские карты для подростков, проект «Финкультура» ЦБ РФ.' },
+
+  { id:'media', checked:false,
+    title:'Информационная безопасность и медиаграмотность.',
+    тезисы:'ФЗ-436 «О защите детей от информации...», фейки, критическое мышление, родительский контроль, правила общения в мессенджерах.' },
+
+  { id:'eco', checked:false,
+    title:'Экологическое воспитание и раздельный сбор отходов.',
+    тезисы:'Школьные эко-проекты, «Зелёная Россия», раздельный сбор, эко-уроки, участие в субботниках.' },
+
+  { id:'adapt1', checked:false,
+    title:'Адаптация учащихся (1 класс / переход в 5 класс).',
+    тезисы:'Психологические особенности возраста, режим дня, помощь в учёбе, контакты психолога, признаки дезадаптации.' },
+
+  { id:'gifted', checked:false,
+    title:'Работа с одарёнными детьми: олимпиады и конкурсы.',
+    тезисы:'Всероссийская олимпиада школьников, «Олимпис», «Кенгуру», перечневые олимпиады, поддержка талантливых детей.' },
+
+  { id:'vol', checked:false,
+    title:'Волонтёрство и участие в «Движении Первых».',
+    тезисы:'Цели движения, направления (добро, патриот, труд, наука), как вступить, проекты класса.' },
+
+  { id:'right', checked:false,
+    title:'Права и обязанности родителей и учащихся (ФЗ-273).',
+    тезисы:'ФЗ «Об образовании в РФ», устав школы, локальные акты, порядок обращения, конфликтные комиссии.' },
+
+  { id:'ext', checked:false,
+    title:'Профилактика экстремизма и терроризма.',
+    тезисы:'Признаки вовлечения в деструктивные сообщества в сети, алгоритм действий, контакты доверия, антитеррористическая тренировка.' },
+
+  /* ====== НОВЫЕ БЛОКИ ====== */
+  { id:'teen', checked:false,
+    title:'Психологические особенности подросткового возраста. Поддержка ребёнка в период взросления.',
+    тезисы:'Возрастные кризисы 11–14 лет, сепарация от родителей, эмоциональная нестабильность, потребность в признании сверстников. Признаки стресса и дезадаптации. Роль семьи: активное слушание, границы без давления, совместный досуг. Контакты школьного психолога. Рекомендации Минпросвещения по психолого-педагогическому сопровождению.' },
+
+  { id:'subj', checked:false,
+    title:'Адаптация к новым предметам, учителям и возросшей учебной нагрузке.',
+    тезисы:'Переход на кабинетную систему, введение новых предметов (физика, химия, информатика, второй иностранный язык). Различия в требованиях учителей-предметников. Нормы нагрузки по СанПиН 2.3/2.4.3590-20. Как помочь ребёнку: режим выполнения ДЗ, планирование времени, работа с разными стилями преподавания. Индивидуальный подход при трудностях.' },
+
+  { id:'ediary', checked:false,
+    title:'Электронный дневник: правила ведения, контроль успеваемости и взаимодействие с родителями.',
+    тезисы:'Работа в АИС «Сетевой город. Образование» / «Электронный журнал» / «МЭШ» / «РЭШ». Как читать оценки, комментарии учителей, домашние задания. Частые ошибки родителей: гиперконтроль vs полное отсутствие внимания. Правила обратной связи через дневник. Сроки выставления оценок, порядок апелляции. Цифровая грамотность: безопасность логина и пароля, запрет передачи доступа третьим лицам.' }
+];
+
+/* ====== РЕНДЕР ПАНЕЛИ УПРАВЛЕНИЯ ====== */
+function renderControls() {
+  const c = document.getElementById('blocks-container');
+  c.innerHTML = '';
+  blocks.forEach((b, i) => {
+    const div = document.createElement('div');
+    div.className = 'block-item';
+    const isCustom = b.id.startsWith('custom_');
+    div.innerHTML = `
+      <div class="checkbox-container">
+        <input type="checkbox" id="chk_${b.id}" ${b.checked?'checked':''} onchange="toggleBlock('${b.id}')">
+        <label for="chk_${b.id}" style="display:inline; cursor:pointer;"><b>${i+1}.</b> ${escapeHtml(b.title)}</label>
+        ${isCustom ? `<button class="btn btn-del" onclick="deleteBlock('${b.id}')">✕</button>` : ''}
+      </div>
+      <div style="display:${b.checked?'block':'none'}; margin-top:8px;">
+        <label>Тема:</label>
+        <input type="text" value="${escapeAttr(b.title)}" oninput="editBlock('${b.id}','title',this.value)">
+        <label>Тезисы (что нейросеть должна раскрыть):</label>
+        <textarea oninput="editBlock('${b.id}','тезисы',this.value)">${escapeHtml(b.тезисы)}</textarea>
+      </div>`;
+    c.appendChild(div);
+  });
+  document.getElementById('counter').textContent = blocks.filter(b=>b.checked).length + ' выбрано';
+}
+
+/* ====== ДЕЙСТВИЯ ====== */
+function toggleBlock(id) { const b = blocks.find(x=>x.id===id); if(b){b.checked=!b.checked;} renderControls(); updatePrompt(); }
+function editBlock(id, field, value) { const b = blocks.find(x=>x.id===id); if(b){b[field]=value;} updatePrompt(); }
+function deleteBlock(id) { if(!confirm('Удалить?')) return; blocks = blocks.filter(b=>b.id!==id); renderControls(); updatePrompt(); }
+function addCustomBlock() {
+  blocks.push({ id:'custom_'+Date.now(), checked:true, title:'Свой вопрос', тезисы:'[укажите, что должна раскрыть нейросеть]' });
+  renderControls(); updatePrompt();
+}
+function addCustomFromInput() {
+  const inp = document.getElementById('customTitle');
+  const t = inp.value.trim();
+  if(!t){ alert('Введите тему'); return; }
+  blocks.push({ id:'custom_'+Date.now(), checked:true, title: t.endsWith('.')?t:t+'.', тезисы:'[дополните тезисы]' });
+  inp.value = ''; renderControls(); updatePrompt();
+}
+function selectAll(s) { blocks.forEach(b=>b.checked=s); renderControls(); updatePrompt(); }
+
+/* ====== ГЕНЕРАЦИЯ ПРОМПТА ====== */
+function generatePrompt() {
+  const date = document.getElementById('date').value;
+  const cls = document.getElementById('classNum').value;
+  const chair = document.getElementById('chair').value;
+  const sec = document.getElementById('sec').value;
+  const att = document.getElementById('att').value;
+  const target = document.getElementById('targetLLM').value;
+  const style = document.getElementById('style').value;
+  const detail = document.getElementById('detail').value;
+  const extra = document.getElementById('extra').value.trim();
+  const selected = blocks.filter(b=>b.checked);
+
+  const styleMap = {
+    official: 'официально-деловой, с использованием стандартных формулировок протоколов ("СЛУШАЛИ", "ВЫСТУПИЛИ", "ПОСТАНОВИЛИ", "РЕШИЛИ")',
+    soft: 'официально-деловой, но с мягкими, родительско-ориентированными формулировками, без излишней бюрократии',
+    brief: 'максимально краткий: 5–8 строк на каждый вопрос, только суть'
+  };
+  const detailMap = {
+    short: 'кратко (по 2–3 пункта в СЛУШАЛИ и ПОСТАНОВИЛИ)',
+    medium: 'средне (по 4–6 пунктов, с раскрытием сути)',
+    full: 'подробно (с примерами, ссылками на нормативные акты, развёрнутыми формулировками)'
+  };
+
+  const targetIntro = {
+    universal: 'Ты — опытный педагог и секретарь родительских собраний.',
+    gpt: 'You are an expert Russian school teacher and protocol secretary. Respond in Russian.',
+    giga: 'Ты — эксперт-педагог и секретарь родительских собраний. Отвечай строго на русском языке, в соответствии с российскими нормами делопроизводства.',
+    yandex: 'Ты — опытный российский педагог и секретарь. Следуй требованиям ФЗ-273 "Об образовании" и правилам делопроизводства.',
+    claude: 'Ты — методист и секретарь родительских собраний с 15-летним стажем. Составляй протоколы строго по российским стандартам.'
+  };
+
+  const povestkaList = selected.map((b,i)=>`${i+1}. ${b.title}`).join('\n');
+  const blocksDetail = selected.map((b,i)=>`
+### Вопрос ${i+1}. ${b.title}
+Тезисы для раскрытия:
+${b.тезисы.split(/[,.]/).map(x=>x.trim()).filter(x=>x).map(x=>`- ${x}`).join('\n')}
+`).join('\n');
+
+  return `${targetIntro[target]}
+
+## ЗАДАЧА
+Составь протокол родительского собрания учащихся ${cls} от ${date}.
+
+## КОНТЕКСТ
+- Председатель: ${chair}
+- Секретарь: ${sec}
+- Присутствовало: ${att} чел.
+
+## ПОВЕСТКА ДНЯ
+${povestkaList}
+
+## ДЕТАЛИЗАЦИЯ ПО ВОПРОСАМ
+${blocksDetail}
+
+## ТРЕБОВАНИЯ К ОФОРМЛЕНИЮ
+- Стиль: ${styleMap[style]}.
+- Детализация: ${detailMap[detail]}.
+- Структура каждого вопроса: СЛУШАЛИ → ВЫСТУПИЛИ (опционально) → ПОСТАНОВИЛИ.
+- В разделе ПОСТАНОВИЛИ — нумерованные конкретные решения с указанием ответственных (родители, классный руководитель, родительский комитет).
+- В конце — блок "Подписи": Председатель ___________ /${chair}/ и Секретарь ___________ /${sec}/.
+- Не выдумывай фамилии участников, кроме указанных выше.
+- Используй шаблонные формулировки ("принять к сведению", "взять под контроль", "обеспечить").
+${extra ? '- Дополнительные требования: ' + extra : ''}
+
+## ФОРМАТ ОТВЕТА
+Выдай ТОЛЬКО готовый текст протокола в формате, готовом к печати (без комментариев и пояснений). Начни с заголовка "ПРОТОКОЛ родительского собрания..." и даты.`;
+}
+
+function updatePrompt() {
+  document.getElementById('prompt').textContent = generatePrompt();
+}
+
+/* ====== КОПИРОВАНИЕ / СКАЧИВАНИЕ ====== */
+function copyPrompt() {
+  const text = generatePrompt();
+  navigator.clipboard.writeText(text).then(()=>{
+    const t = document.getElementById('toast');
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 1800);
+  });
+}
+function downloadPrompt() {
+  const text = generatePrompt();
+  const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `prompt_protocol_${document.getElementById('classNum').value.replace(/[^\wа-яА-Я]/g,'_')}.txt`;
+  a.click();
+}
+
+/* ====== УТИЛИТЫ ====== */
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return escapeHtml(s); }
+
+/* ====== СТАРТ ====== */
+renderControls();
+updatePrompt();
+</script>
+</body>
+</html>
